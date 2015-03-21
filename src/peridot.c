@@ -5,25 +5,25 @@ extern const void *__peridot_start_led_base;
 extern const void *__peridot_digital_io_base;
 extern const int __peridot_digital_io_width;
 
+static mrb_value pio_cls;
+static mrb_value start_led;
+static mrb_value digital_io;
+
 static mrb_value
 piocore_new(mrb_state *mrb, mrb_int base, mrb_int width)
 {
-  static mrb_value cls;
-
-  if (!mrb_test(cls)) {
+  if (!mrb_test(pio_cls)) {
     mrb_value mod;
     mod = mrb_const_get(mrb, mrb_obj_value(mrb->object_class), mrb_intern_lit(mrb, "Altera"));
-    cls = mrb_const_get(mrb, mod, mrb_intern_lit(mrb, "PIOCore"));
+    pio_cls = mrb_const_get(mrb, mod, mrb_intern_lit(mrb, "PIOCore"));
   }
 
-  return mrb_funcall(mrb, cls, "new", 2, mrb_fixnum_value(base), mrb_fixnum_value(width));
+  return mrb_funcall(mrb, pio_cls, "new", 2, mrb_fixnum_value(base), mrb_fixnum_value(width));
 }
 
 static mrb_value
 peridot_start_led(mrb_state *mrb, mrb_value self)
 {
-  static mrb_value start_led;
-
   if (!mrb_test(start_led)) {
     start_led = piocore_new(mrb, (mrb_int)__peridot_start_led_base, 1);
   }
@@ -33,8 +33,6 @@ peridot_start_led(mrb_state *mrb, mrb_value self)
 static mrb_value
 peridot_digital_io(mrb_state *mrb, mrb_value self)
 {
-  static mrb_value digital_io;
-
   if (!mrb_test(digital_io)) {
     digital_io = piocore_new(mrb,
                     (mrb_int)__peridot_digital_io_base,
@@ -56,6 +54,10 @@ mrb_mruby_board_peridot_gem_init(mrb_state *mrb)
 
   mrb_define_class_method(mrb, cls, "start_led" , peridot_start_led , MRB_ARGS_NONE());
   mrb_define_class_method(mrb, cls, "digital_io", peridot_digital_io, MRB_ARGS_NONE());
+
+  pio_cls = mrb_nil_value();
+  start_led = mrb_nil_value();
+  digital_io = mrb_nil_value();
 }
 
 void
