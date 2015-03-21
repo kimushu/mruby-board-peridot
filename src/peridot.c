@@ -44,7 +44,7 @@ peridot_digital_io(mrb_state *mrb, mrb_value self)
 }
 
 void
-mrb_board_peridot_gem_init(mrb_state *mrb)
+mrb_mruby_board_peridot_gem_init(mrb_state *mrb)
 {
   struct RClass *cls;
 
@@ -59,6 +59,6 @@ mrb_board_peridot_gem_init(mrb_state *mrb)
 }
 
 void
-mrb_board_peridot_gem_final(mrb_state *mrb)
+mrb_mruby_board_peridot_gem_final(mrb_state *mrb)
 {
 }
