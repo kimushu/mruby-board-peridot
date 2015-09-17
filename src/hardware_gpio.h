@@ -5,6 +5,7 @@
 #include "mruby/class.h"
 #include "mruby/data.h"
 
+struct gpio_data;
 typedef const char *(*gpio_rdfunc)(struct gpio_data *, uint32_t *);
 typedef const char *(*gpio_wrfunc)(struct gpio_data *, uint32_t);
 

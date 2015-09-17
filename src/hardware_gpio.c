@@ -1,5 +1,6 @@
 #include "hardware_gpio.h"
 #include "mruby/range.h"
+#include <string.h>
 
 static void
 gpio_free(mrb_state *mrb, void *ptr)
@@ -62,7 +63,7 @@ gpi_is_asserted(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_value)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_value)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if (((value ^ data->owner->polarity) & data->mask) == data->mask) {
@@ -80,7 +81,7 @@ gpi_is_high(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_value)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_value)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if ((value & data->mask) == data->mask) {
@@ -98,7 +99,7 @@ gpi_is_low(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_value)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_value)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if ((value & data->mask) == 0) {
@@ -116,7 +117,7 @@ gpi_is_negated(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_value)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_value)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if (((value ^ data->owner->polarity) & data->mask) == 0) {
@@ -152,7 +153,7 @@ gpi_value(mrb_state *mrb, mrb_value self)
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
   if (((data->msb - data->lsb + 1) > max_width) ||
-      (error = (*data->get_value)(data, &value))) {
+      ((error = (*data->get_value)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return mrb_fixnum_value((mrb_int)((value & data->mask) / (1u << data->lsb)));
@@ -233,11 +234,10 @@ gpi_slice(mrb_state *mrb, mrb_value self)
   new_data->refs = 0;
   new_data->msb = msb;
   new_data->lsb = lsb;
-  new_data->reg = src_data->reg;
   new_data->mask = ((1u << (msb - lsb + 1)) - 1) << lsb;
   ++new_data->owner->refs;
 
-  return pio_wrap(mrb, mrb_obj_class(mrb, self), new_data);
+  return mrb_obj_value(Data_Wrap_Struct(mrb, mrb_obj_class(mrb, self), &hardware_gpio_type, new_data));
 }
 
 static mrb_value
@@ -247,7 +247,7 @@ gpio_is_output_disabled(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_outen)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_outen)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if ((value & data->mask) == 0) {
@@ -265,7 +265,7 @@ gpio_is_output_enabled(mrb_state *mrb, mrb_value self)
   uint32_t value;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if ((data->msb > data->lsb) || (error = (*data->get_outen)(data, &value))) {
+  if ((data->msb > data->lsb) || ((error = (*data->get_outen)(data, &value)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   if ((value & data->mask) == data->mask) {
@@ -292,8 +292,8 @@ gpio_value_set(mrb_state *mrb, mrb_value self)
   value <<= data->lsb;
   value &= data->mask;
   if (((data->msb - data->lsb + 1) > max_width) ||
-      (error = (*data->set_value)(data, value)) ||
-      (error = (*data->clr_value)(data, value ^ data->mask))) {
+      ((error = (*data->set_value)(data, value)) != NULL) ||
+      ((error = (*data->clr_value)(data, value ^ data->mask)) != NULL)) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -309,8 +309,8 @@ gpio_assert(mrb_state *mrb, mrb_value self)
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
   clr = data->owner->polarity & data->mask;
   set = clr ^ data->mask;
-  if (((set != 0) && (error = (*data->set_value)(data, set))) ||
-      ((clr != 0) && (error = (*data->clr_value)(data, clr)))) {
+  if (((set != 0) && ((error = (*data->set_value)(data, set)) != NULL)) ||
+      ((clr != 0) && ((error = (*data->clr_value)(data, clr)) != NULL))) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -322,7 +322,7 @@ gpio_high(mrb_state *mrb, mrb_value self)
   const char *error;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if (error = (*data->set_value)(data, data->mask)) {
+  if ((error = (*data->set_value)(data, data->mask)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -334,7 +334,7 @@ gpio_low(mrb_state *mrb, mrb_value self)
   const char *error;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if (error = (*data->clr_value)(data, data->mask)) {
+  if ((error = (*data->clr_value)(data, data->mask)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -350,8 +350,8 @@ gpio_negate(mrb_state *mrb, mrb_value self)
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
   set = data->owner->polarity & data->mask;
   clr = set ^ data->mask;
-  if (((set != 0) && (error = (*data->set_value)(data, set))) ||
-      ((clr != 0) && (error = (*data->clr_value)(data, clr)))) {
+  if (((set != 0) && ((error = (*data->set_value)(data, set)) != NULL)) ||
+      ((clr != 0) && ((error = (*data->clr_value)(data, clr)) != NULL))) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -363,7 +363,7 @@ gpio_output_disable(mrb_state *mrb, mrb_value self)
   const char *error;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if (error = (*data->clr_outen)(data, data->mask)) {
+  if ((error = (*data->clr_outen)(data, data->mask)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -375,7 +375,7 @@ gpio_output_enable(mrb_state *mrb, mrb_value self)
   const char *error;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if (error = (*data->set_outen)(data, data->mask)) {
+  if ((error = (*data->set_outen)(data, data->mask)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
@@ -387,7 +387,7 @@ gpio_toggle(mrb_state *mrb, mrb_value self)
   const char *error;
   struct gpio_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
-  if (error = (*data->tgl_value)(data, data->mask)) {
+  if ((error = (*data->tgl_value)(data, data->mask)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
   return self;
