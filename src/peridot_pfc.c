@@ -1,4 +1,5 @@
 #include "hardware_gpio.h"
+#include "mruby/variable.h"
 
 struct pfc_regs {
   uint32_t direct_in;
@@ -12,6 +13,8 @@ struct pfc_gpio_data {
   uint32_t gp_bits;         /* Owner only */
   struct pfc_regs *regs[4]; /* Copied */
 };
+
+#define PFC_PTR(p)    ((struct pfc_gpio_data *)(p))
 
 #define DIRECT_IN(regs, mask) \
   (((mask) & 0xffu) ? (__builtin_ldwio(&(regs)->direct_in) & (mask) & 0xffu) : 0u)
@@ -59,17 +62,6 @@ gpio_get_value(struct pfc_gpio_data *data, uint32_t *value)
     (DIRECT_IN(data->regs[1], m >>  8) <<  8) |
     (DIRECT_IN(data->regs[2], m >> 16) << 16) |
     (DIRECT_IN(data->regs[3], m >> 22) << 22);
-  return NULL;
-}
-
-static const char *
-gpio_let_value(struct pfc_gpio_data *data, uint32_t bits)
-{
-  const uint32_t m = data->common.mask;
-  DIRECT_OUT(data->regs[0], m >>  0, bits >>  0);
-  DIRECT_OUT(data->regs[1], m >>  8, bits >>  8);
-  DIRECT_OUT(data->regs[2], m >> 16, bits >> 16);
-  DIRECT_OUT(data->regs[3], m >> 22, bits >> 22);
   return NULL;
 }
 
@@ -152,7 +144,7 @@ gpio_initialize(mrb_state *mrb, mrb_value self)
   mrb_int index;
   struct pfc_gpio_data *data;
 
-  data = (struct pfc_gpio_data *)DATA_PTR(self);
+  data = PFC_PTR(DATA_PTR(self));
   // if (data) {
   //   mrb_free(mrb, data->aux);
   //   mrb_free(mrb, data);
@@ -162,14 +154,13 @@ gpio_initialize(mrb_state *mrb, mrb_value self)
   mrb_get_args(mrb, "iiii", &base[0], &base[1], &base[2], &base[3]);
 
   data = (struct pfc_gpio_data *)mrb_calloc(mrb, 1, sizeof(struct pfc_gpio_data));
-  data->common.owner = data;
+  data->common.owner = &data->common;
   data->common.refs = 1;
   data->common.msb = width - 1;
   data->common.lsb = 0;
   data->common.mask = (1u << width) - 1;
   data->common.polarity = 0;
   data->common.get_value = (gpio_rdfunc)gpio_get_value;
-  data->common.let_value = (gpio_wrfunc)gpio_let_value;
   data->common.set_value = (gpio_wrfunc)gpio_set_value;
   data->common.clr_value = (gpio_wrfunc)gpio_clr_value;
   data->common.tgl_value = (gpio_wrfunc)gpio_tgl_value;
@@ -189,14 +180,14 @@ gpio_initialize(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
-gpi_is_general_purpose(mrb_state *mrb, mrb_value self)
+gpio_is_general_purpose(mrb_state *mrb, mrb_value self)
 {
-  struct pfc_gpio_data *data;
-  data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct pfc_gpio_data);
+  struct gpio_data *data;
+  data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
   if (data->msb > data->lsb) {
     mrb_raisef(mrb, E_TYPE_ERROR, "cannot use is_general_purpose for bus signal");
   }
-  if ((data->owner->gp_bits & data->mask) == data->mask) {
+  if ((PFC_PTR(data->owner)->gp_bits & data->mask) == data->mask) {
     return mrb_true_value();
   }
   else {
@@ -205,14 +196,14 @@ gpi_is_general_purpose(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
-gpi_is_special_function(mrb_state *mrb, mrb_value self)
+gpio_is_special_function(mrb_state *mrb, mrb_value self)
 {
-  struct pfc_gpio_data *data;
-  data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct pfc_gpio_data);
+  struct gpio_data *data;
+  data = DATA_GET_PTR(mrb, self, &hardware_gpio_type, struct gpio_data);
   if (data->msb > data->lsb) {
     mrb_raisef(mrb, E_TYPE_ERROR, "cannot use is_special_function for bus signal");
   }
-  if ((data->owner->gp_bits & data->mask) == 0) {
+  if ((PFC_PTR(data->owner)->gp_bits & data->mask) == 0) {
     return mrb_true_value();
   }
   else {
@@ -277,7 +268,7 @@ pfc_init(mrb_state *mrb, struct RClass *hw_mod, struct RClass *mod)
   //
   cls = mrb_define_class_under(mrb, mod, "PinFuncCtl", mrb->object_class);
 
-  gpio_final(mrb, hw_mod, cls);
+  gpio_init(mrb, hw_mod, cls);
 }
 
 void
