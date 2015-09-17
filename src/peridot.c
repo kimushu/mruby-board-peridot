@@ -4,6 +4,9 @@
 extern struct RClass *hardware_init(mrb_state *mrb);
 extern void hardware_final(mrb_state *mrb);
 
+extern void pfc_init(mrb_state *mrb, struct RClass *hw_mod, struct RClass *mod);
+extern void pfc_final(mrb_state *mrb);
+
 __attribute__((weak)) void
 peridot_class_init(mrb_state *mrb, struct RClass *cls)
 {
