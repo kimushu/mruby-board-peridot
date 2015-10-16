@@ -80,7 +80,7 @@ servo_raw_position(mrb_state *mrb, mrb_value self)
   if ((error = (*data->get_position)(data, &raw)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
-  return mrb_fixnum_value(position);
+  return mrb_fixnum_value(raw);
 }
 
 static mrb_value
@@ -114,7 +114,7 @@ servo_calib_min_set(mrb_state *mrb, mrb_value self)
   int value;
   struct servo_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
-  mrb_get_args(mrb, "i", &position);
+  mrb_get_args(mrb, "i", &value);
   if ((value < 0) || (value > 255) || (value >= data->calib_max)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "invalid range");
   }
@@ -136,7 +136,7 @@ servo_calib_max_set(mrb_state *mrb, mrb_value self)
   int value;
   struct servo_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
-  mrb_get_args(mrb, "i", &position);
+  mrb_get_args(mrb, "i", &value);
   if ((value < 0) || (value > 255) || (value <= data->calib_min)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "invalid range");
   }
