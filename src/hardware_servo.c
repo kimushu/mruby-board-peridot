@@ -154,16 +154,27 @@ servo_configure(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
+servo_disable(mrb_state *mrb, mrb_value self)
+{
+  const char *error;
+  struct servo_data *data;
+  data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
+  if ((error = (*data->let_enabled)(data, 0)) != NULL) {
+    mrb_raisef(mrb, E_TYPE_ERROR, error);
+  }
+  return self;
+}
+
+static mrb_value
 servo_enable(mrb_state *mrb, mrb_value self)
 {
   const char *error;
-  int position;
   struct servo_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
-  if ((error = (*data->get_position)(data, &position)) != NULL) {
+  if ((error = (*data->let_enabled)(data, 1)) != NULL) {
     mrb_raisef(mrb, E_TYPE_ERROR, error);
   }
-  return mrb_fixnum_value(position);
+  return self;
 }
 
 void
