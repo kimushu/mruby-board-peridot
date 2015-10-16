@@ -115,7 +115,7 @@ servo_calib_min_set(mrb_state *mrb, mrb_value self)
   struct servo_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
   mrb_get_args(mrb, "i", &position);
-  if ((value < 0) || (value > 255) || (value > data->calib_max)) {
+  if ((value < 0) || (value > 255) || (value >= data->calib_max)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "invalid range");
   }
   data->calib_min = (uint8_t)value;
@@ -137,7 +137,7 @@ servo_calib_max_set(mrb_state *mrb, mrb_value self)
   struct servo_data *data;
   data = DATA_GET_PTR(mrb, self, &hardware_servo_type, struct servo_data);
   mrb_get_args(mrb, "i", &position);
-  if ((value < 0) || (value > 255) || (value < data->calib_min)) {
+  if ((value < 0) || (value > 255) || (value <= data->calib_min)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "invalid range");
   }
   data->calib_max = (uint8_t)value;
