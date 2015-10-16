@@ -11,6 +11,8 @@ typedef const char *(*servo_wrfunc)(struct servo_data *, int);
 
 struct servo_data {
   int channel;
+  uint8_t calib_min;
+  uint8_t calib_max;
   servo_wrfunc cfg_pin;
   servo_rdfunc get_enabled;
   servo_wrfunc let_enabled;
